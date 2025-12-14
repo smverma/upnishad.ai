@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+.idea/
+.vscode/
+data/ # Assuming data handles might be large or private, but usually safe to ignore if just raw texts
