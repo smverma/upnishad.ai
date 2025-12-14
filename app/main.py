@@ -5,12 +5,14 @@ except AttributeError:
     pass
 
 from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag.engine import ask_question, initialize_rag
 from app.whatsapp.handler import handle_whatsapp_message
 from app.youtube.automation import generate_daily_story
 import os
+import traceback
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,8 +40,13 @@ async def health_check():
 
 @app.post("/api/ask")
 def ask(question: str):
-    answer = ask_question(question)
-    return {"answer": answer}
+    try:
+        answer = ask_question(question)
+        return {"answer": answer}
+    except Exception as e:
+        print(f"CRITICAL ERROR in /api/ask: {e}")
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"answer": f"Internal Server Error: {str(e)}"})
 
 @app.post("/api/whatsapp")
 async def whatsapp_webhook(request: Request):

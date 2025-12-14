@@ -159,6 +159,7 @@ Answer:"""
         
         # Use retry logic
         response = call_llm_with_retry([HumanMessage(content=prompt)])
+        print("LLM Response received successfully.")
         return response.content
 
     except Exception as e:

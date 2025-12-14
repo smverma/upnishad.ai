@@ -54,10 +54,19 @@ async function sendMessage() {
         const response = await fetch('/api/ask?question=' + encodeURIComponent(text), {
             method: 'POST'
         });
+        if (!response.ok) {
+            const errText = await response.text(); // Try to get text if not JSON
+            try {
+                const errJson = JSON.parse(errText);
+                throw new Error(errJson.answer || `Server Error: ${response.status}`);
+            } catch (e) {
+                throw new Error(`Server Error: ${response.status} - ${errText}`);
+            }
+        }
         const data = await response.json();
         addMessage(data.answer, false);
     } catch (error) {
-        addMessage("Sorry, I am having trouble connecting to the wisdom source.", false);
+        addMessage(`Sorry, trouble connecting: ${error.message}`, false);
         console.error(error);
     }
 }
