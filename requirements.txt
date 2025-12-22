@@ -15,3 +15,5 @@ requests
 pydantic
 python-multipart
 jinja2
+fastapi-sso
+itsdangerous
