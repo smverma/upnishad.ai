@@ -167,7 +167,11 @@ Question: {query}
         print("LLM Response received successfully.")
         
         # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
-        clean_content = response.content.replace('```json', '').replace('```', '').strip()
+        content_str = response.content
+        if isinstance(content_str, list):
+            content_str = "".join([str(part) for part in content_str])
+        
+        clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
         
         import json
         try:
