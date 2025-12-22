@@ -145,22 +145,38 @@ def ask_question(query: str) -> str:
         context = "\n\n".join(context_parts)
         print(f"Start of LLM Context:\n{context[:500]}\nEnd of Context Preview")
         
-        # 4. Prompt LLM
+        # 4. Prompt LLM for JSON response
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
 If the answer is not in the context, say that you don't know, but answer from your general knowledge of the scriptures if possible, explicitly stating it is from general knowledge.
 Please provide a concise and clear answer (maximum 300 words).
 
+IMPORTANT: You must return your response in purely VALID JSON format with no markdown formatting (no ```json blocks).
+The JSON must have two keys:
+1. "answer": The text of your answer.
+2. "follow_up_questions": A list of 4 short, relevant follow-up questions based on the answer.
+
 Context:
 {context}
 
 Question: {query}
-Answer:"""
+"""
         
         # Use retry logic
         response = call_llm_with_retry([HumanMessage(content=prompt)])
         print("LLM Response received successfully.")
-        return response.content
+        
+        # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
+        clean_content = response.content.replace('```json', '').replace('```', '').strip()
+        
+        import json
+        try:
+            return json.loads(clean_content)
+        except json.JSONDecodeError:
+            print(f"Failed to parse JSON from LLM: {response.content}")
+            # Fallback for plain text response
+            return {"answer": response.content, "follow_up_questions": []}
+
 
     except Exception as e:
         print(f"Error processing request: {e}")

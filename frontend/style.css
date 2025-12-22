@@ -28,11 +28,6 @@ body {
     position: relative;
 }
 
-/* .background-orb {
-    display: none;
-} */
-/* Commenting out orb to use the new image cleanly */
-
 .background-orb {
     position: absolute;
     top: 0;
@@ -44,18 +39,6 @@ body {
     z-index: -1;
     opacity: 0.4;
     animation: none;
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translate(0, 0);
-    }
-
-    50% {
-        transform: translate(20px, 20px);
-    }
 }
 
 .container {
@@ -70,6 +53,8 @@ body {
 header {
     text-align: center;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 5;
 }
 
 header h1 {
@@ -86,6 +71,46 @@ header p {
     opacity: 0.7;
 }
 
+/* Header Layout */
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.title-section {
+    text-align: left;
+}
+
+.shloka-btn {
+    background: rgba(255, 159, 67, 0.1);
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.shloka-btn:hover {
+    background: var(--accent-color);
+    color: #1a1a1a;
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(255, 159, 67, 0.3);
+}
+
+.shloka-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
 .chat-container {
     flex: 1;
     background: var(--glass-bg);
@@ -96,6 +121,7 @@ header p {
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    position: relative;
 }
 
 .chat-history {
@@ -158,28 +184,29 @@ strong {
 }
 
 .suggestions-container {
-    padding: 0 15px 25px 15px;
-    /* Significantly increased bottom padding */
-    display: flex;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
-    overflow-x: auto;
     background: rgba(0, 0, 0, 0.2);
-    /* subtle fade at top border to blend with chat */
     border-top: 1px solid var(--glass-border);
 }
 
 .suggestion-chip {
     background: rgba(255, 255, 255, 0.05);
-    /* very subtle */
     border: 1px solid var(--glass-border);
     color: rgba(255, 255, 255, 0.7);
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 12px;
+    border-radius: 12px;
     font-size: 0.85rem;
     cursor: pointer;
-    white-space: nowrap;
+    text-align: center;
     transition: all 0.2s ease;
     font-family: 'Outfit', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 .suggestion-chip:hover {
@@ -263,4 +290,131 @@ footer {
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
+}
+
+/* Cosmic Spinner */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 19, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    transition: opacity 0.3s, visibility 0.3s;
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.spinner-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+}
+
+.cosmic-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--accent-color);
+    animation: spin var(--duration) linear infinite;
+}
+
+.ring-1 {
+    width: 80px;
+    height: 80px;
+    margin-top: -40px;
+    margin-left: -40px;
+    border-width: 2px;
+    border-top-color: #ff9f43;
+    --duration: 2s;
+}
+
+.ring-2 {
+    width: 60px;
+    height: 60px;
+    margin-top: -30px;
+    margin-left: -30px;
+    border-width: 2px;
+    border-top-color: #feca57;
+    animation-direction: reverse;
+    --duration: 3s;
+}
+
+.ring-3 {
+    width: 40px;
+    height: 40px;
+    margin-top: -20px;
+    margin-left: -20px;
+    border-width: 2px;
+    border-top-color: #ffffff;
+    --duration: 1.5s;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.cosmic-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent-color);
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+}
+
+.loading-text {
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    animation: fadeInOut 2s infinite;
+}
+
+@keyframes fadeInOut {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }
