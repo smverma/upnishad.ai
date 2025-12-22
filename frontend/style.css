@@ -192,6 +192,50 @@ strong {
     border-top: 1px solid var(--glass-border);
 }
 
+/* Mobile Layout Adjustments */
+@media (max-width: 768px) {
+    .suggestions-container {
+        display: flex;
+        overflow-x: auto;
+        padding: 10px;
+        gap: 8px;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scrolling on iOS */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    .suggestions-container::-webkit-scrollbar {
+        display: none;
+        /* Chrome/Safari */
+    }
+
+    .suggestion-chip {
+        flex: 0 0 auto;
+        /* Don't shrink, auto width based on content */
+        min-width: 200px;
+        /* Ensure chips have decent width */
+        white-space: normal;
+        /* Allow text wrapping inside chip if needed */
+        font-size: 0.8rem;
+        padding: 10px;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .shloka-btn span {
+        display: none;
+        /* Hide text on very small screens if needed, or keep it */
+    }
+
+    .shloka-btn {
+        padding: 8px;
+    }
+}
+
 .suggestion-chip {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
