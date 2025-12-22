@@ -193,46 +193,93 @@ strong {
 }
 
 /* Mobile Layout Adjustments */
+/* Mobile Layout Adjustments */
 @media (max-width: 768px) {
-    .suggestions-container {
-        display: flex;
-        overflow-x: auto;
+    .container {
         padding: 10px;
-        gap: 8px;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        /* Smooth scrolling on iOS */
-        scrollbar-width: none;
-        /* Firefox */
+        /* Reduced from 20px */
+        height: 100vh;
+        /* Use full height */
+        max-height: -webkit-fill-available;
+        /* Fix for iOS safari bottom bar */
     }
 
-    .suggestions-container::-webkit-scrollbar {
-        display: none;
-        /* Chrome/Safari */
+    header {
+        margin-bottom: 10px;
+        /* Reduced from 20px */
     }
 
-    .suggestion-chip {
-        flex: 0 0 auto;
-        /* Don't shrink, auto width based on content */
-        min-width: 200px;
-        /* Ensure chips have decent width */
-        white-space: normal;
-        /* Allow text wrapping inside chip if needed */
+    .header-content {
+        gap: 10px;
+    }
+
+    header h1 {
+        font-size: 1.2rem;
+        /* Smaller title */
+        line-height: 1.2;
+    }
+
+    header p {
         font-size: 0.8rem;
-        padding: 10px;
+        display: none;
+        /* Hide subtitle to save space */
     }
 
-    .header h1 {
-        font-size: 1.5rem;
+    .shloka-btn {
+        padding: 6px 10px;
     }
 
     .shloka-btn span {
         display: none;
-        /* Hide text on very small screens if needed, or keep it */
     }
 
-    .shloka-btn {
-        padding: 8px;
+    .suggestions-container {
+        display: flex;
+        overflow-x: auto;
+        padding: 8px 10px;
+        gap: 8px;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        height: auto;
+        min-height: 50px;
+        /* specific height */
+        align-items: center;
+        /* Center vertically */
+    }
+
+    .suggestions-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .suggestion-chip {
+        flex: 0 0 auto;
+        width: auto;
+        /* Just width of content */
+        max-width: 200px;
+        /* Limit width */
+        min-width: unset;
+        /* Remove min-width force */
+        white-space: nowrap;
+        /* Force single line text */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.75rem;
+        padding: 8px 12px;
+        height: 36px;
+        /* Fixed compact height */
+        display: flex;
+        align-items: center;
+    }
+
+    footer {
+        display: none;
+        /* Hide footer if not critically needed on mobile */
+    }
+
+    .chat-history {
+        padding: 10px;
+        /* Reduced padding inside chat */
     }
 }
 
