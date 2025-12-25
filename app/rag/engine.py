@@ -59,10 +59,10 @@ def initialize_rag():
         print(f"Failed to connect to Pinecone Index: {e}")
         return
     
-    # LLM - Gemini 1.5 Flash (Good free tier)
+    # LLM - Gemini 1.5 Pro (Better instruction following)
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0.7, google_api_key=google_api_key)
-        print("RAG Initialized successfully with Pinecone & Gemini (Direct Mode).")
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.5, google_api_key=google_api_key)
+        print("RAG Initialized successfully with Pinecone & Gemini Pro (Direct Mode).")
     except Exception as e:
         print(f"Failed to initialize Gemini: {e}")
 
@@ -261,7 +261,11 @@ Question: {query}
     
     import json
     try:
-        return json.loads(clean_content)
+        final_json = json.loads(clean_content)
+        # Debugging: Prepend mode to answer to confirm path
+        if mode == "deep_dive":
+            final_json["answer"] = final_json["answer"]
+        return final_json
     except json.JSONDecodeError:
         print(f"Failed to parse JSON from LLM: {response.content}")
         # Fallback for plain text response to avoid crashing
