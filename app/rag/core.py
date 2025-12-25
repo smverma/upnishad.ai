@@ -257,8 +257,21 @@ The JSON must have two keys:
         return {"answer": f"Error calling AI: {str(e)}", "follow_up_questions": []}
 
     # 4. PROCESS RESPONSE
+    # Normalize content (handle list output from Gemini)
+    content_text = ""
+    if isinstance(response.content, list):
+        for part in response.content:
+            if isinstance(part, dict) and "text" in part:
+                content_text += part["text"]
+            elif isinstance(part, str):
+                content_text += part
+            else:
+                content_text += str(part)
+    else:
+        content_text = str(response.content)
+
     if is_deep_dive:
-        answer_text = response.content
+        answer_text = content_text
         
         # Debug tag to prove new logic ran
         status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
@@ -278,11 +291,7 @@ The JSON must have two keys:
         }
     else:
         # Standard JSON parsing
-        content_str = str(response.content)
-        if isinstance(response.content, list):
-             content_str = "".join([str(part) for part in response.content])
-             
-        clean_content = content_str.replace('```json', '').replace('```', '').strip()
+        clean_content = content_text.replace('```json', '').replace('```', '').strip()
         try:
             import json
             return json.loads(clean_content)
