@@ -94,11 +94,18 @@ def ask_question(query: str, mode: str = "chat") -> str:
     if not (llm):
         initialize_rag()
     
+    mode = mode.strip().lower() # Normalize mode string
+    
+    # Intent Detection Override
+    # If the user explicitly asks for "deep dive" in the text, force the mode
+    if "deep dive" in query.lower() or "structure" in query.lower():
+        print(f"Intent detected in query ('{query}'). Forcing mode to 'deep_dive'.")
+        mode = "deep_dive"
+
+    print(f"RAG Engine processing: query='{query}', mode='{mode}'")
+    
     # Context Retrieval Strategy
     context_parts = []
-    
-    mode = mode.strip().lower() # Normalize mode string
-    print(f"RAG Engine received request: query='{query}', mode='{mode}'")
 
     # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
     if mode == "deep_dive":
