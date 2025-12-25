@@ -32,6 +32,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     print(">>> UPNISHAD AI SERVER RESTARTING - LOADING v5 LOGIC <<<")
+    print(">>> FORCE RELOAD FOR DEEP DIVE LOGIC <<<")
     initialize_rag()
 
 # API Endpoints
