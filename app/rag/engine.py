@@ -97,6 +97,9 @@ def ask_question(query: str, mode: str = "chat") -> str:
     # Context Retrieval Strategy
     context_parts = []
     
+    mode = mode.strip().lower() # Normalize mode string
+    print(f"RAG Engine received request: query='{query}', mode='{mode}'")
+
     # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
     if mode == "deep_dive":
         print(f"Deep Dive Mode: Attempting Local FAISS Search for '{query}'")
@@ -208,10 +211,18 @@ CONTEXT FROM SCRIPTURES:
 
 USER QUESTION: {query}
 
-IMPORTANT: Return VALID JSON with these keys:
-- "answer": A markdown formatted string containing the 5 sections above. Use bold headers with Emojis exactly as shown (e.g. **1️⃣ Direct Answer**).
-- "follow_up_questions": List of 4 short relevant follow-up questions.
+IMPORTANT: Re-read the System Instruction above. 
+You MUST return the response in the specified VALID JSON format.
+The "answer" value MUST be a Markdown string containing the 5 bolded sections exactly as requested:
+1. **1️⃣ Direct Answer (TL;DR)**
+2. **2️⃣ Scriptural Grounding**
+3. **3️⃣ Meaning & Interpretation**
+4. **4️⃣ Practical Application**
+5. **5️⃣ Reflection Prompt**
+
+Do not deviate from this structure.
 """
+        print("Constructing Deep Dive Prompt with Strict Formatting.")
     else:
         # Standard Chat Mode
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
