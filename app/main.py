@@ -31,6 +31,7 @@ app.add_middleware(
 # Initialize RAG on startup
 @app.on_event("startup")
 async def startup_event():
+    print(">>> UPNISHAD AI SERVER RESTARTING - LOADING v5 LOGIC <<<")
     initialize_rag()
 
 # API Endpoints
