@@ -3,7 +3,7 @@ import time
 import random
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pinecone import Pinecone
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from typing import List
 
 # Global variables
@@ -157,79 +157,41 @@ def ask_question(query: str, mode: str = "chat") -> str:
 
     # 4. Prompt LLM for JSON response
     
+    messages = []
+    
     if mode == "deep_dive":
         system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
-Your role is to explain philosophical ideas clearly and compassionately, without preaching, judgment, or superstition.
-You must be calm, neutral, and reflective. Avoid fatalism, fear, or moral pressure.
+Your role is to explain philosophical ideas clearly and compassionately.
 
-MANDATORY ANSWER STRUCTURE (Follow EXACTLY):
+MANDATORY OUTPUT FORMAT:
+ You MUST return a VALID JSON object with two keys:
+ 1. "answer": A Markdown string formatted EXACTLY as follows:
+    **1️⃣ Direct Answer (TL;DR)**
+    (2-3 lines)
+    **2️⃣ Scriptural Grounding**
+    (Quote and Meaning)
+    **3️⃣ Meaning & Interpretation**
+    (Philosophical context)
+    **4️⃣ Practical Application**
+    (Real life example)
+    **5️⃣ Reflection Prompt**
+    (Question)
+ 2. "follow_up_questions": List of 4 strings.
 
-**1️⃣ Direct Answer (TL;DR)**
-2–3 lines. Clear and practical definition.
-
-**2️⃣ Scriptural Grounding**
-- Reference (e.g. Bhagavad Gita 3.5)
-- Sanskrit Quote (e.g. "Na hi kaścit...")
-- English Meaning
-
-**3️⃣ Meaning & Interpretation**
-- Modern explanation
-- No mysticism, no moral judgement
-- Clear philosophy (e.g. "Karma is not fate/punishment but cause and effect")
-
-**4️⃣ Practical Application**
-- One real-life example (Work, family, study, or inner life)
-- How to apply this wisdom today.
-
-**5️⃣ Reflection Prompt**
-- One gentle, open-ended question for the user to think about.
-
-**Optional Persona Lens** (Only if helpful)
-- 👩‍💼 For a Working Professional / 🎓 For a Student (brief specific advice)
-
-If any section cannot be fulfilled based on context, state: "This teaching offers reflection rather than direct instruction."
-
-Here is an EXAMPLE of the desired output format and tone:
-User Question: "What is Karma?"
-**1️⃣ Direct Answer (TL;DR)**
-Karma means action and its consequences.
-It explains how intentional actions—thoughts, words, and deeds—shape future experiences, not as punishment or reward, but as a natural law of cause and effect.
-
-**2️⃣ Scriptural Grounding**
-Bhagavad Gita 3.5
-“Na hi kaścit kṣaṇam api jātu tiṣṭhaty akarma-kṛt”
-No one can remain without action even for a moment.
-
-**3️⃣ Meaning & Interpretation**
-Karma is often misunderstood as fate or destiny, but the scriptures describe it as movement and responsibility, not judgment.
-Every action leaves an imprint that influences tendencies, habits, and future situations. Importantly, intention matters as much as the action itself.
-
-**4️⃣ Practical Application**
-In daily life: When you act with honesty and effort at work or in relationships, you create clarity and trust. When actions are driven by fear or ego, stress follows naturally.
-Karma encourages responsibility without guilt: Focus on right action now; the future unfolds from that.
-
-**5️⃣ Reflection Prompt**
-Which repeated actions or habits in your life are quietly shaping your future today?
+Do NOT deviate. Ensure correct JSON escaping for the markdown string.
 """
-        prompt = f"""{system_instruction}
-            
-CONTEXT FROM SCRIPTURES:
+        user_content = f"""
+CONTEXT:
 {context}
 
-USER QUESTION: {query}
-
-IMPORTANT: Re-read the System Instruction above. 
-You MUST return the response in the specified VALID JSON format.
-The "answer" value MUST be a Markdown string containing the 5 bolded sections exactly as requested:
-1. **1️⃣ Direct Answer (TL;DR)**
-2. **2️⃣ Scriptural Grounding**
-3. **3️⃣ Meaning & Interpretation**
-4. **4️⃣ Practical Application**
-5. **5️⃣ Reflection Prompt**
-
-Do not deviate from this structure.
+QUESTION: {query}
 """
-        print("Constructing Deep Dive Prompt with Strict Formatting.")
+        messages = [
+            SystemMessage(content=system_instruction),
+            HumanMessage(content=user_content)
+        ]
+        print("Constructing Deep Dive Prompt with SystemMessage.")
+
     else:
         # Standard Chat Mode
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
@@ -247,9 +209,11 @@ Context:
 
 Question: {query}
 """
+        messages = [HumanMessage(content=prompt)]
+
         
     # Use retry logic
-    response = call_llm_with_retry([HumanMessage(content=prompt)])
+    response = call_llm_with_retry(messages)
     print("LLM Response received successfully.")
     
     # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
