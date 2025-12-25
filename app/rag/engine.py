@@ -97,8 +97,9 @@ def ask_question(query: str, mode: str = "chat") -> str:
     mode = mode.strip().lower() # Normalize mode string
     
     # Intent Detection Override
-    # If the user explicitly asks for "deep dive" in the text, force the mode
-    if "deep dive" in query.lower() or "structure" in query.lower():
+    # Force Deep Dive for core philosophical concepts
+    keywords = ["deep dive", "structure", "karma", "dharma", "yoga", "moksha", "life", "death"]
+    if any(k in query.lower() for k in keywords):
         print(f"Intent detected in query ('{query}'). Forcing mode to 'deep_dive'.")
         mode = "deep_dive"
 
