@@ -85,7 +85,7 @@ def call_llm_with_retry(prompt_messages, max_retries=5):
             else:
                 raise e
 
-def ask_question(query: str) -> str:
+def ask_question(query: str, mode: str = "chat") -> str:
     global pinecone_index, llm, embeddings
     
     if not (pinecone_index and llm and embeddings):
@@ -118,37 +118,54 @@ def ask_question(query: str) -> str:
         
         # 3. Construct Context
         context_parts = []
-        print(f"Query: {query}")
+        print(f"Query: {query}, Mode: {mode}")
         print(f"Matches found: {len(results.matches)}")
         for match in results.matches:
-            print(f" - Match ID: {match.id}, Score: {match.score}")
             # Similarity threshold (lowered to 0.1 to ensure we get data)
             if match.score < 0.1:
-                print(f"   -> SKIPPED (Score < 0.1)")
                 continue
                 
             text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
             
             if text_content:
                 context_parts.append(text_content)
-                print(f"   -> ADDED: {text_content[:100]}...")
-            else:
-                print(f"   -> SKIPPED (No 'text' or 'chunk_text'). Metadata keys: {list(match.metadata.keys()) if match.metadata else 'None'}")
         
-        if not context_parts:
-            print("No context parts after filtering.")
-            print(f"Total Matches: {len(results.matches)}")
-            if len(results.matches) > 0:
-                print(f"First Match Metadata: {results.matches[0].metadata}")
-            return "I couldn't find any relevant information in the scriptures to answer your question."
-
         context = "\n\n".join(context_parts)
-        print(f"Start of LLM Context:\n{context[:500]}\nEnd of Context Preview")
-        
+        if not context:
+            context = "No specific scripture context found. Answer from general vedic knowledge."
+
         # 4. Prompt LLM for JSON response
-        prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
+        
+        if mode == "deep_dive":
+            system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
+Your role is to explain philosophical ideas clearly and compassionately, without preaching, judgment, or superstition.
+You must be calm, neutral, and reflective. Avoid fatalism, fear, or moral pressure.
+
+MANDATORY ANSWER STRUCTURE:
+1. "Direct Answer": 2-3 lines. Clear and practical.
+2. "Scriptural Grounding": Exact text reference (chapter + verse), Short Sanskrit quote, English meaning.
+3. "Meaning & Interpretation": Modern explanation, no mysticism, no moral judgement.
+4. "Practical Application": One real-life example (Work, family, study, or inner life).
+5. "Reflection Prompt": One gentle, open-ended question.
+
+If any section cannot be fulfilled based on context, state: "This teaching offers reflection rather than direct instruction."
+"""
+            prompt = f"""{system_instruction}
+            
+CONTEXT FROM SCRIPTURES:
+{context}
+
+USER QUESTION: {query}
+
+IMPORTANT: Return VALID JSON with these keys:
+- "answer": A markdown formatted string containing the 5 sections above. Use bold headers (e.g. **1. Direct Answer**).
+- "follow_up_questions": List of 4 short relevant follow-up questions.
+"""
+        else:
+            # Standard Chat Mode
+            prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
-If the answer is not in the context, say that you don't know, but answer from your general knowledge of the scriptures if possible, explicitly stating it is from general knowledge.
+If the answer is not in the context, say that you don't know, but answer from your general knowledge of the scriptures if possible.
 Please provide a concise and clear answer (maximum 300 words).
 
 IMPORTANT: You must return your response in purely VALID JSON format with no markdown formatting (no ```json blocks).
@@ -178,8 +195,8 @@ Question: {query}
             return json.loads(clean_content)
         except json.JSONDecodeError:
             print(f"Failed to parse JSON from LLM: {response.content}")
-            # Fallback for plain text response
-            return {"answer": response.content, "follow_up_questions": []}
+            # Fallback for plain text response to avoid crashing
+            return {"answer": str(response.content), "follow_up_questions": []}
 
 
     except Exception as e:

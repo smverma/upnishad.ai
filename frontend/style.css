@@ -509,3 +509,47 @@ footer {
         opacity: 1;
     }
 }
+
+/* Mode Tabs */
+.mode-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.mode-tab {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 24px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.3s;
+}
+
+.mode-tab:hover {
+    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-tab.active {
+    background: var(--accent-color);
+    color: #1a1a1a;
+    border-color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* Mobile Tweak for tabs */
+@media (max-width: 768px) {
+    .mode-tabs {
+        margin-bottom: 10px;
+    }
+
+    .mode-tab {
+        padding: 6px 16px;
+        font-size: 0.8rem;
+    }
+}

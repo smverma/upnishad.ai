@@ -99,6 +99,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 
+    let currentMode = "chat";
+    const modeTabs = document.querySelectorAll('.mode-tab');
+
+    // Tab Switching Logic
+    modeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update UI
+            modeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Update State
+            currentMode = tab.dataset.mode;
+        });
+    });
+
+    // ... (existing code)
+
     async function sendMessage() {
         if (!userInput) return;
         const text = userInput.value.trim();
@@ -110,7 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleLoading(true);
 
         try {
-            const response = await fetch('/api/ask?question=' + encodeURIComponent(text), {
+            // Pass the currentMode to the API
+            const response = await fetch(`/api/ask?question=${encodeURIComponent(text)}&mode=${currentMode}`, {
                 method: 'POST'
             });
             if (!response.ok) {
@@ -148,6 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 followUps = data.answer.follow_up_questions || [];
             } else if (data.answer) {
                 answerText = data.answer;
+            }
+
+            if (currentMode === 'deep_dive') {
+                // Optional: distinctive styling wrapping
+                answerText = `<div class="deep-dive-content">${answerText}</div>`;
             }
 
             addMessage(answerText, false);

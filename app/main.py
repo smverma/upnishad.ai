@@ -39,9 +39,9 @@ async def health_check():
     return {"status": "ok"}
 
 @app.post("/api/ask")
-def ask(question: str):
+def ask(question: str, mode: str = "chat"):
     try:
-        answer = ask_question(question)
+        answer = ask_question(question, mode=mode)
         return {"answer": answer}
     except Exception as e:
         print(f"CRITICAL ERROR in /api/ask: {e}")
