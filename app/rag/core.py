@@ -101,6 +101,13 @@ def ask_question(query: str, mode: str = "chat") -> str:
     keywords = ["deep dive", "structure", "karma", "dharma", "yoga", "moksha", "life", "death", "soul", "god"]
     is_deep_dive = (mode_in == "deep_dive") or any(k in query.lower() for k in keywords)
 
+    # DEBUG LOGGING (PROOF OF LIFE)
+    try:
+        with open("server_debug_log.txt", "a") as f:
+            f.write(f"Query: {query} | Mode: {mode_in} | IsDeepDive: {is_deep_dive} | Time: {time.time()}\n")
+    except:
+        pass
+
     if is_deep_dive:
         print(f"Executing Deep Dive Logic for query: '{query}'")
     else:
