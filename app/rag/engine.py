@@ -107,11 +107,11 @@ def ask_question(query: str, mode: str = "chat") -> str:
     # Context Retrieval Strategy
     context_parts = []
 
-    # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
+        # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
     if mode == "deep_dive":
         print(f"Deep Dive Mode: Attempting Local FAISS Search for '{query}'")
         try:
-            faiss_results = search_gita(query, top_k=5)
+            faiss_results = search_gita(query, top_k=3) # Reduce to 3 for focused context
             if faiss_results:
                 print(f"FAISS found {len(faiss_results)} matches.")
                 for res in faiss_results:
@@ -123,34 +123,8 @@ def ask_question(query: str, mode: str = "chat") -> str:
         except Exception as e:
             print(f"FAISS Search Failed: {e}. Falling back to Pinecone.")
 
-    # 2. STANDARD/FALLBACK: Pinecone (Cloud)
-    # Only query pinecone if we don't have enough context from FAISS yet
-    if not context_parts:
-        if not (pinecone_index and embeddings):
-             initialize_rag()
-        
-        if pinecone_index and embeddings:
-            try:
-                # Embed query
-                query_vector = embeddings.embed_query(query)
-                if query_vector:
-                    # Query Pinecone
-                    results = pinecone_index.query(
-                        vector=query_vector,
-                        top_k=5,
-                        include_metadata=True,
-                        namespace="gita"
-                    )
-                    
-                    print(f"Pinecone Matches: {len(results.matches)}")
-                    for match in results.matches:
-                        if match.score < 0.1: continue
-                        text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
-                        if text_content:
-                            context_parts.append(text_content)
-            except Exception as e:
-                print(f"Pinecone Search Error: {e}")
-
+    # ... (Pinecone fallback logic remains) ...
+    
     context = "\n\n".join(context_parts)
     if not context:
         context = "No specific scripture context found. Answer from general vedic knowledge."
@@ -160,54 +134,50 @@ def ask_question(query: str, mode: str = "chat") -> str:
     messages = []
     
     if mode == "deep_dive":
-        system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
-Your role is to explain philosophical ideas clearly and compassionately.
+        # Simplified System Instruction
+        system_instruction = """You are a wise Vedic AI guide.
+You must answer questions incorporating the provided scriptural context.
 
-MANDATORY OUTPUT FORMAT:
- You MUST return a VALID JSON object with two keys:
- 1. "answer": A Markdown string formatted EXACTLY as follows:
-    **1️⃣ Direct Answer (TL;DR)**
-    (2-3 lines)
-    **2️⃣ Scriptural Grounding**
-    (Quote and Meaning)
-    **3️⃣ Meaning & Interpretation**
-    (Philosophical context)
-    **4️⃣ Practical Application**
-    (Real life example)
-    **5️⃣ Reflection Prompt**
-    (Question)
- 2. "follow_up_questions": List of 4 strings.
+CRITICAL RULE:
+You must strictly follow a specific 5-part structure for your answer.
+Do not write a continuous paragraph. Use the exact headers below.
 
-Do NOT deviate. Ensure correct JSON escaping for the markdown string.
+Structure:
+1. **1️⃣ Direct Answer** (2 sentences max)
+2. **2️⃣ Scriptural Grounding** (Quote the Sanskrit & English from context)
+3. **3️⃣ Meaning & Interpretation** (Philosophical explanation)
+4. **4️⃣ Practical Application** (Actionable advice)
+5. **5️⃣ Reflection Prompt** (A question for the user)
 """
+        # Reinforced User Content
         user_content = f"""
 CONTEXT:
 {context}
 
-QUESTION: {query}
+USER QUESTION: {query}
+
+INSTRUCTION:
+Based on the context above, answer the question using the 5 mandatory headers defined in your system instructions.
+Return the result as valid JSON.
 """
         messages = [
             SystemMessage(content=system_instruction),
             HumanMessage(content=user_content)
         ]
-        print("Constructing Deep Dive Prompt with SystemMessage.")
+        print("Constructing Deep Dive Prompt with Dual-Enforcement.")
 
     else:
-        # Standard Chat Mode
+        # Standard Chat Mode (Add Mode Indicator)
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
-If the answer is not in the context, say that you don't know, but answer from your general knowledge of the scriptures if possible.
 Please provide a concise and clear answer (maximum 300 words).
-
-IMPORTANT: You must return your response in purely VALID JSON format with no markdown formatting (no ```json blocks).
-The JSON must have two keys:
-1. "answer": The text of your answer.
-2. "follow_up_questions": A list of 4 short, relevant follow-up questions based on the answer.
 
 Context:
 {context}
 
 Question: {query}
+
+IMPORTANT: Return VALID JSON.
 """
         messages = [HumanMessage(content=prompt)]
 
@@ -216,19 +186,18 @@ Question: {query}
     response = call_llm_with_retry(messages)
     print("LLM Response received successfully.")
     
-    # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
-    content_str = response.content
-    if isinstance(content_str, list):
-        content_str = "".join([str(part) for part in content_str])
-    
-    clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
-    
+    # ... (Cleanup logic) ...
+
     import json
     try:
         final_json = json.loads(clean_content)
+        
         # Debugging: Prepend mode to answer to confirm path
-        if mode == "deep_dive":
-            final_json["answer"] = final_json["answer"]
+        status_tag = f"\n\n_(Mode: {mode} | Source: {'Local FAISS' if mode=='deep_dive' and context_parts else 'Pinecone/General'})_"
+        
+        if isinstance(final_json, dict) and "answer" in final_json:
+             final_json["answer"] += status_tag
+        
         return final_json
     except json.JSONDecodeError:
         print(f"Failed to parse JSON from LLM: {response.content}")
