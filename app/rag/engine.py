@@ -160,7 +160,7 @@ def ask_question(query: str, mode: str = "chat") -> str:
     messages = []
     
     if mode == "deep_dive":
-        # Simplified System Instruction
+        # Simplified System Instruction - PURE MARKDOWN FOCUS
         system_instruction = """You are a wise Vedic AI guide.
 You must answer questions incorporating the provided scriptural context.
 
@@ -174,6 +174,8 @@ Structure:
 3. **3️⃣ Meaning & Interpretation** (Philosophical explanation)
 4. **4️⃣ Practical Application** (Actionable advice)
 5. **5️⃣ Reflection Prompt** (A question for the user)
+
+AFTER the reflection prompt, add a section called "Suggested Questions:" with 4 follow-up questions.
 """
         # Reinforced User Content
         user_content = f"""
@@ -183,14 +185,14 @@ CONTEXT:
 USER QUESTION: {query}
 
 INSTRUCTION:
-Based on the context above, answer the question using the 5 mandatory headers defined in your system instructions.
-Return the result as valid JSON.
+Answer in PURE MARKDOWN format. Do not use JSON.
+Follow the 5 headers exactly.
 """
         messages = [
             SystemMessage(content=system_instruction),
             HumanMessage(content=user_content)
         ]
-        print("Constructing Deep Dive Prompt with Dual-Enforcement.")
+        print("Constructing Deep Dive Prompt with Markdown Output Strategy.")
 
     else:
         # Standard Chat Mode (Add Mode Indicator)
@@ -204,6 +206,9 @@ Context:
 Question: {query}
 
 IMPORTANT: Return VALID JSON.
+The JSON must have two keys:
+1. "answer": The text of your answer.
+2. "follow_up_questions": A list of 4 short, relevant follow-up questions based on the answer.
 """
         messages = [HumanMessage(content=prompt)]
 
@@ -212,18 +217,41 @@ IMPORTANT: Return VALID JSON.
     response = call_llm_with_retry(messages)
     print("LLM Response received successfully.")
     
-    # ... (Cleanup logic) ...
+    # Handle Response Processing based on Mode
+    if mode == "deep_dive":
+        # For Deep Dive, we expect Markdown, not JSON.
+        # We manually construct the response object.
+        answer_text = response.content
+        
+        # Add Debug Tag
+        status_tag = f"\n\n_(Mode: Deep Dive | Source: {'Local FAISS' if context_parts else 'Pinecone/Fallback'})_"
+        answer_text += status_tag
+        
+        # Naive extraction of follow-up questions if present
+        follow_ups = []
+        if "Suggested Questions:" in answer_text:
+            parts = answer_text.split("Suggested Questions:")
+            answer_text = parts[0].strip() + status_tag # Re-add tag to main text
+            
+            # fast extract lines
+            lines = parts[1].strip().split('\n')
+            follow_ups = [line.strip('- ').strip() for line in lines if line.strip()]
+        
+        return {
+            "answer": answer_text,
+            "follow_up_questions": follow_ups if follow_ups else ["What is Dharma?", "Explain Yoga", "Who is Krishna?", "Meaning of Life"]
+        }
 
+    # Standard Mode JSON Parsing
+    content_str = response.content
+    if isinstance(content_str, list):
+        content_str = "".join([str(part) for part in content_str])
+    
+    clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
+    
     import json
     try:
         final_json = json.loads(clean_content)
-        
-        # Debugging: Prepend mode to answer to confirm path
-        status_tag = f"\n\n_(Mode: {mode} | Source: {'Local FAISS' if mode=='deep_dive' and context_parts else 'Pinecone/General'})_"
-        
-        if isinstance(final_json, dict) and "answer" in final_json:
-             final_json["answer"] += status_tag
-        
         return final_json
     except json.JSONDecodeError:
         print(f"Failed to parse JSON from LLM: {response.content}")
