@@ -94,56 +94,49 @@ def ask_question(query: str, mode: str = "chat") -> str:
     if not (llm):
         initialize_rag()
     
-    mode = mode.strip().lower() # Normalize mode string
+    mode_in = mode.strip().lower()
     
-    # Intent Detection Override
-    # Force Deep Dive for core philosophical concepts
-    keywords = ["deep dive", "structure", "karma", "dharma", "yoga", "moksha", "life", "death"]
-    if any(k in query.lower() for k in keywords):
-        print(f"Intent detected in query ('{query}'). Forcing mode to 'deep_dive'.")
-        mode = "deep_dive"
+    # 1. DETERMINE MODE
+    # Force Deep Dive for core philosophical concepts regardless of UI toggles
+    keywords = ["deep dive", "structure", "karma", "dharma", "yoga", "moksha", "life", "death", "soul", "god"]
+    is_deep_dive = (mode_in == "deep_dive") or any(k in query.lower() for k in keywords)
 
-    print(f"RAG Engine processing: query='{query}', mode='{mode}'")
+    if is_deep_dive:
+        print(f"Executing Deep Dive Logic for query: '{query}'")
+    else:
+        print(f"Executing Standard Chat Logic for query: '{query}'")
     
-    # Context Retrieval Strategy
+    # 2. CONTEXT RETRIEVAL
     context_parts = []
+    
+    # Attempt FAISS (Local)
+    try:
+        # We always try FAISS first for Gita related queries as it is faster and more precise
+        faiss_results = search_gita(query, top_k=3)
+        if faiss_results:
+            print(f"FAISS found {len(faiss_results)} matches.")
+            for res in faiss_results:
+                    text = f"Source: {res['source']}\nSanskrit: {res['sanskrit']}\nMeaning: {res['text']}"
+                    context_parts.append(text)
+    except Exception as e:
+        print(f"FAISS Search Skipped/Failed: {e}")
 
-        # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
-    if mode == "deep_dive":
-        print(f"Deep Dive Mode: Attempting Local FAISS Search for '{query}'")
-        try:
-            faiss_results = search_gita(query, top_k=3) # Reduce to 3 for focused context
-            if faiss_results:
-                print(f"FAISS found {len(faiss_results)} matches.")
-                for res in faiss_results:
-                     # Create rich context string including metadata
-                     text = f"Source: {res['source']}\nSanskrit: {res['sanskrit']}\nMeaning: {res['text']}"
-                     context_parts.append(text)
-            else:
-                print("FAISS returned 0 results. Falling back to Pinecone.")
-        except Exception as e:
-            print(f"FAISS Search Failed: {e}. Falling back to Pinecone.")
-
-    # 2. STANDARD/FALLBACK: Pinecone (Cloud)
-    # Only query pinecone if we don't have enough context from FAISS yet
+    # Fallback/Augment with Pinecone (Cloud)
+    # If FAISS provided nothing, or if we are in standard chat and want more breadth
     if not context_parts:
         if not (pinecone_index and embeddings):
-             initialize_rag()
+                initialize_rag()
         
         if pinecone_index and embeddings:
             try:
-                # Embed query
                 query_vector = embeddings.embed_query(query)
                 if query_vector:
-                    # Query Pinecone
                     results = pinecone_index.query(
                         vector=query_vector,
-                        top_k=5,
+                        top_k=4,
                         include_metadata=True,
                         namespace="gita"
                     )
-                    
-                    print(f"Pinecone Matches: {len(results.matches)}")
                     for match in results.matches:
                         if match.score < 0.1: continue
                         text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
@@ -151,17 +144,15 @@ def ask_question(query: str, mode: str = "chat") -> str:
                             context_parts.append(text_content)
             except Exception as e:
                 print(f"Pinecone Search Error: {e}")
-    
+
     context = "\n\n".join(context_parts)
     if not context:
         context = "No specific scripture context found. Answer from general vedic knowledge."
 
-    # 4. Prompt LLM for JSON response
-    
+    # 3. CONSTRUCT MESSAGES & CALL LLM
     messages = []
     
-    if mode == "deep_dive":
-        # Simplified System Instruction - PURE MARKDOWN FOCUS
+    if is_deep_dive:
         system_instruction = """You are a wise Vedic AI guide.
 You must answer questions incorporating the provided scriptural context.
 
@@ -178,7 +169,6 @@ Structure:
 
 AFTER the reflection prompt, add a section called "Suggested Questions:" with 4 follow-up questions.
 """
-        # Reinforced User Content
         user_content = f"""
 CONTEXT:
 {context}
@@ -193,10 +183,8 @@ Follow the 5 headers exactly.
             SystemMessage(content=system_instruction),
             HumanMessage(content=user_content)
         ]
-        print("Constructing Deep Dive Prompt with Markdown Output Strategy.")
-
     else:
-        # Standard Chat Mode (Add Mode Indicator)
+        # Standard Chat
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
 Please provide a concise and clear answer (maximum 300 words).
@@ -213,55 +201,41 @@ The JSON must have two keys:
 """
         messages = [HumanMessage(content=prompt)]
 
-        
-    # Use retry logic
-    response = call_llm_with_retry(messages)
-    print("LLM Response received successfully.")
-    
-    # Handle Response Processing based on Mode
-    if mode == "deep_dive":
-        # For Deep Dive, we expect Markdown, not JSON.
-        # We manually construct the response object.
+    # Call LLM
+    try:
+        response = call_llm_with_retry(messages)
+    except Exception as e:
+        return {"answer": f"Error calling AI: {str(e)}", "follow_up_questions": []}
+
+    # 4. PROCESS RESPONSE
+    if is_deep_dive:
         answer_text = response.content
         
-        # Add Debug Tag
-        status_tag = f"\n\n_(Mode: Deep Dive | Source: {'Local FAISS' if context_parts else 'Pinecone/Fallback'})_"
+        # Debug tag to prove new logic ran
+        status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if context_parts else 'Cloud/General'})_"
         answer_text += status_tag
         
-        # Naive extraction of follow-up questions if present
+        # Extract Follow Ups
         follow_ups = []
         if "Suggested Questions:" in answer_text:
             parts = answer_text.split("Suggested Questions:")
-            answer_text = parts[0].strip() + status_tag # Re-add tag to main text
-            
-            # fast extract lines
+            answer_text = parts[0].strip() + status_tag
             lines = parts[1].strip().split('\n')
             follow_ups = [line.strip('- ').strip() for line in lines if line.strip()]
-        
+            
         return {
             "answer": answer_text,
-            "follow_up_questions": follow_ups if follow_ups else ["What is Dharma?", "Explain Yoga", "Who is Krishna?", "Meaning of Life"]
+            "follow_up_questions": follow_ups if follow_ups else ["What is Dharma?", "Explain Yoga", "Who is Krishna?"]
         }
-
-    # Standard Mode JSON Parsing
-    content_str = response.content
-    if isinstance(content_str, list):
-        content_str = "".join([str(part) for part in content_str])
-    
-    clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
-    
-    import json
-    try:
-        final_json = json.loads(clean_content)
-        return final_json
-    except json.JSONDecodeError:
-        print(f"Failed to parse JSON from LLM: {response.content}")
-        # Fallback for plain text response to avoid crashing
-        return {"answer": str(response.content), "follow_up_questions": []}
-
-
-    except Exception as e:
-        print(f"Error processing request: {e}")
-        if "429" in str(e) or "quota" in str(e).lower():
-            return "I am receiving a lot of requests right now. Please try again in a minute. (Quota Exceeded)"
-        return f"Error processing request: {str(e)}"
+    else:
+        # Standard JSON parsing
+        content_str = str(response.content)
+        if isinstance(response.content, list):
+             content_str = "".join([str(part) for part in response.content])
+             
+        clean_content = content_str.replace('```json', '').replace('```', '').strip()
+        try:
+            import json
+            return json.loads(clean_content)
+        except json.JSONDecodeError:
+            return {"answer": clean_content, "follow_up_questions": []}
