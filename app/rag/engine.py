@@ -178,6 +178,28 @@ MANDATORY ANSWER STRUCTURE (Follow EXACTLY):
 - 👩‍💼 For a Working Professional / 🎓 For a Student (brief specific advice)
 
 If any section cannot be fulfilled based on context, state: "This teaching offers reflection rather than direct instruction."
+
+Here is an EXAMPLE of the desired output format and tone:
+User Question: "What is Karma?"
+**1️⃣ Direct Answer (TL;DR)**
+Karma means action and its consequences.
+It explains how intentional actions—thoughts, words, and deeds—shape future experiences, not as punishment or reward, but as a natural law of cause and effect.
+
+**2️⃣ Scriptural Grounding**
+Bhagavad Gita 3.5
+“Na hi kaścit kṣaṇam api jātu tiṣṭhaty akarma-kṛt”
+No one can remain without action even for a moment.
+
+**3️⃣ Meaning & Interpretation**
+Karma is often misunderstood as fate or destiny, but the scriptures describe it as movement and responsibility, not judgment.
+Every action leaves an imprint that influences tendencies, habits, and future situations. Importantly, intention matters as much as the action itself.
+
+**4️⃣ Practical Application**
+In daily life: When you act with honesty and effort at work or in relationships, you create clarity and trust. When actions are driven by fear or ego, stress follows naturally.
+Karma encourages responsibility without guilt: Focus on right action now; the future unfolds from that.
+
+**5️⃣ Reflection Prompt**
+Which repeated actions or habits in your life are quietly shaping your future today?
 """
         prompt = f"""{system_instruction}
             
