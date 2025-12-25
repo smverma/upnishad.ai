@@ -123,7 +123,33 @@ def ask_question(query: str, mode: str = "chat") -> str:
         except Exception as e:
             print(f"FAISS Search Failed: {e}. Falling back to Pinecone.")
 
-    # ... (Pinecone fallback logic remains) ...
+    # 2. STANDARD/FALLBACK: Pinecone (Cloud)
+    # Only query pinecone if we don't have enough context from FAISS yet
+    if not context_parts:
+        if not (pinecone_index and embeddings):
+             initialize_rag()
+        
+        if pinecone_index and embeddings:
+            try:
+                # Embed query
+                query_vector = embeddings.embed_query(query)
+                if query_vector:
+                    # Query Pinecone
+                    results = pinecone_index.query(
+                        vector=query_vector,
+                        top_k=5,
+                        include_metadata=True,
+                        namespace="gita"
+                    )
+                    
+                    print(f"Pinecone Matches: {len(results.matches)}")
+                    for match in results.matches:
+                        if match.score < 0.1: continue
+                        text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
+                        if text_content:
+                            context_parts.append(text_content)
+            except Exception as e:
+                print(f"Pinecone Search Error: {e}")
     
     context = "\n\n".join(context_parts)
     if not context:
