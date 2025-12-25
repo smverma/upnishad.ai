@@ -10,7 +10,7 @@ faiss_index = None
 gita_metadata = []
 model = None
 
-DATA_FILE_PATH = "app/data/gita.csv" # Expected CSV location
+DATA_FILE_PATH = "app/data/bhagavad_gita.csv" # Expected CSV location
 INDEX_FILE_PATH = "app/data/gita_faiss.index"
 METADATA_FILE_PATH = "app/data/gita_metadata.pkl"
 
@@ -46,18 +46,22 @@ def initialize_faiss():
             gita_metadata = []
             
             for _, row in df.iterrows():
-                # Ensure columns exist, handle variations
-                chapter = row.get('chapter', '')
-                verse = row.get('verse', '')
-                sanskrit = row.get('sanskrit', '')
-                translation = row.get('translation', row.get('meaning', ''))
+                # Correct Mapping based on bhagavad_gita.csv columns
+                # Columns: ,verse_number,verse_in_sanskrit,sanskrit_verse_transliteration,translation_in_english,meaning_in_english,...
                 
-                text_for_embedding = f"Chapter {chapter}, Verse {verse}. {translation}"
+                # verse_number usually looks like "Chapter 1, Verse 1"
+                verse_ref = row.get('verse_number', 'Unknown')
+                sanskrit = row.get('verse_in_sanskrit', '')
+                translation = row.get('translation_in_english', row.get('meaning_in_english', ''))
+                
+                # Clean up verse ref if needed or use as is
+                
+                text_for_embedding = f"{verse_ref}: {translation}"
                 
                 documents.append(text_for_embedding)
                 gita_metadata.append({
-                    "chapter": chapter,
-                    "verse": verse,
+                    "chapter": verse_ref, # Storing full ref string as chapter for simplicity in display
+                    "verse": "",
                     "sanskrit": sanskrit,
                     "translation": translation,
                     "full_text": text_for_embedding
@@ -104,7 +108,7 @@ def search_gita(query: str, top_k: int = 3):
             results.append({
                 "text": meta['full_text'],
                 "sanskrit": meta['sanskrit'],
-                "source": f"Bhagavad Gita {meta['chapter']}.{meta['verse']}",
+                "source": meta['chapter'], # Contains "Chapter X, Verse Y"
                 "score": float(distances[0][i])
             })
             
