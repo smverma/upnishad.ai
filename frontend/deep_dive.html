@@ -4,11 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vedic Wisdom AI</title>
+    <title>Upnishad AI - Deep Dive</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=2">
+    <style>
+        /* Specific overrides for Deep Dive Page */
+        .mode-tabs {
+            display: none;
+        }
+
+        /* Hide tabs */
+        .header-content h1 {
+            color: #bb86fc;
+        }
+
+        /* Distinctive color */
+        body {
+            background: #0a0a10;
+        }
+
+        /* Slightly darker theme */
+    </style>
 </head>
 
 <body>
@@ -17,31 +35,22 @@
         <header>
             <div class="header-content">
                 <div class="title-section">
-                    <h1>Vedic Wisdom AI</h1>
-                    <p>Ask the ancient scriptures for guidance.</p>
+                    <h1>Upnishad AI: Deep Dive</h1>
+                    <p>Exclusive access to detailed scriptural analysis.</p>
                 </div>
-                <button id="shloka-btn" class="shloka-btn" title="Shloka of the Day">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    <span>Shloka of the Day</span>
-                </button>
             </div>
         </header>
 
-        <div class="mode-tabs">
-            <button class="mode-tab active" data-mode="chat">Chat</button>
-            <a href="deep_dive.html" class="mode-tab"
-                style="text-decoration: none; color: inherit; text-align: center; line-height: 2.5rem;">Deep Dive
-                Console ↗</a>
-        </div>
-
         <main class="chat-container">
             <div id="chat-history" class="chat-history">
-                <div class="message bot-message">Namaste! I am your guide to the wisdom of the Upanishads and Bhagavad
-                    Gita. How can I help you today?</div>
+                <div class="message bot-message">
+                    <strong>Welcome to Deep Dive Mode.</strong><br><br>
+                    I am focused strictly on retrieving verses from the Bhagavad Gita and providing structured,
+                    philosophical answers.<br><br>
+                    Usage:<br>
+                    - Ask specific questions ("What is Karma?")<br>
+                    - I will cite chapters and verses.
+                </div>
             </div>
             <!-- Cosmic Spinner Overlay (Hidden by default) -->
             <div id="loading-overlay" class="loading-overlay hidden">
@@ -56,12 +65,11 @@
 
             <div class="suggestions-container">
                 <button class="suggestion-chip">What is Karma?</button>
-                <button class="suggestion-chip">What is Moksha?</button>
-                <button class="suggestion-chip">How to control the mind?</button>
+                <button class="suggestion-chip">Explain Atman vs Brahman</button>
                 <button class="suggestion-chip">What is Dharma?</button>
             </div>
             <div class="input-area">
-                <input type="text" id="user-input" placeholder="Ask a question..." autocomplete="off">
+                <input type="text" id="user-input" placeholder="Ask a deep question..." autocomplete="off">
                 <button id="send-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,15 +79,8 @@
                 </button>
             </div>
         </main>
-
-        <footer>
-            <!-- <button id="daily-story-btn" class="secondary-btn">Generate Daily Wisdom</button> -->
-        </footer>
-
-        <!-- Shloka Modal Removed -->
-
     </div>
-    <script src="script.js?v=5"></script>
+    <script src="deep_dive.js"></script>
 </body>
 
 </html>
