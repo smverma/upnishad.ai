@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from app.rag.engine import ask_question, initialize_rag
+from app.rag.core import ask_question, initialize_rag
 from app.whatsapp.handler import handle_whatsapp_message
 from app.youtube.automation import generate_daily_story
 import os
