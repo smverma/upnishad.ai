@@ -90,9 +90,6 @@ from app.rag.faiss_engine import search_gita
 def ask_question(query: str, mode: str = "chat") -> str:
     global pinecone_index, llm, embeddings
     
-    # DIAGNOSTIC: FORCE ERROR TO VERIFY CODE RELOAD
-    raise Exception("DIAGNOSTIC_CHECK_CODE_Updated")
-    
     # Initialize Core RAG components (always needed for LLM)
     if not (llm):
         initialize_rag()
