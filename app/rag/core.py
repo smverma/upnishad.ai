@@ -107,23 +107,27 @@ def ask_question(query: str, mode: str = "chat") -> str:
         print(f"Executing Standard Chat Logic for query: '{query}'")
     
     # 2. CONTEXT RETRIEVAL
-    context_parts = []
+    retrieved_sources = [] # New: Store as objects for JSON serialization
     
     # Attempt FAISS (Local)
     try:
         # We always try FAISS first for Gita related queries as it is faster and more precise
-        faiss_results = search_gita(query, top_k=3)
+        faiss_results = search_gita(query, top_k=4)
         if faiss_results:
             print(f"FAISS found {len(faiss_results)} matches.")
             for res in faiss_results:
-                    text = f"Source: {res['source']}\nSanskrit: {res['sanskrit']}\nMeaning: {res['text']}"
-                    context_parts.append(text)
+                    # Spec Section 4.3: "ALWAYS send compressed meaning"
+                    retrieved_sources.append({
+                        "source": "Bhagavad Gita",
+                        "reference": res['source'],
+                        "core_idea": res['text'] # This is the meaning/translation
+                    })
     except Exception as e:
         print(f"FAISS Search Skipped/Failed: {e}")
 
     # Fallback/Augment with Pinecone (Cloud)
     # If FAISS provided nothing, or if we are in standard chat and want more breadth
-    if not context_parts:
+    if not retrieved_sources:
         if not (pinecone_index and embeddings):
                 initialize_rag()
         
@@ -141,42 +145,73 @@ def ask_question(query: str, mode: str = "chat") -> str:
                         if match.score < 0.1: continue
                         text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
                         if text_content:
-                            context_parts.append(text_content)
+                            retrieved_sources.append({
+                                "source": "Upanishads/Vedic Text",
+                                "reference": "Chunk ID: " + match.id,
+                                "core_idea": text_content
+                            })
             except Exception as e:
                 print(f"Pinecone Search Error: {e}")
 
-    context = "\n\n".join(context_parts)
-    if not context:
-        context = "No specific scripture context found. Answer from general vedic knowledge."
+    # Spec Section 4.3: Create Context Object
+    context_object = {
+        "question": query,
+        "retrieved_sources": retrieved_sources
+    }
+    
+    import json
+    context_json_str = json.dumps(context_object, indent=2)
 
     # 3. CONSTRUCT MESSAGES & CALL LLM
     messages = []
     
     if is_deep_dive:
-        system_instruction = """You are a wise Vedic AI guide.
-You must answer questions incorporating the provided scriptural context.
+        # Spec Section 1 & 2 & 3
+        system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
 
-CRITICAL RULE:
-You must strictly follow a specific 5-part structure for your answer.
-Do not write a continuous paragraph. Use the exact headers below.
+## 1. Role Definition
+- Explain concepts clearly and precisely
+- Use retrieved texts as authoritative grounding
+- Maintain a calm, modern, non-religious tone
+- Educate, not persuade
+- You are NOT a guru, preacher, or motivational speaker.
 
-Structure:
-1. **1️⃣ Direct Answer** (2 sentences max)
-2. **2️⃣ Scriptural Grounding** (Quote the Sanskrit & English from context)
-3. **3️⃣ Meaning & Interpretation** (Philosophical explanation)
-4. **4️⃣ Practical Application** (Actionable advice)
-5. **5️⃣ Reflection Prompt** (A question for the user)
+## 2. Canonical Philosophical Position
+- Default stance: **Advaita Vedanta (Upanishadic non-dualism)**
+- Atman ≡ Brahman
+- Separation arises from ignorance (avidya)
+- Liberation is through understanding, not belief
+
+## 3. Mandatory Answer Structure (PURE MARKDOWN)
+Every answer MUST include these sections in order (use exact headers):
+
+1. **Direct Answer (TL;DR)**
+   - 2–3 lines. Clear, factual, non-mystical.
+
+2. **Scriptural Grounding**
+   - Use ONLY retrieved verses.
+   - Chapter + verse required.
+
+3. **Meaning & Interpretation**
+   - Modern explanation.
+   - No devotional or poetic language.
+
+4. **Practical Application**
+   - One real-life implication.
+
+5. **Reflection Prompt**
+   - One neutral, open-ended question.
 
 AFTER the reflection prompt, add a section called "Suggested Questions:" with 4 follow-up questions.
 """
         user_content = f"""
-CONTEXT:
-{context}
+CONTEXT (JSON):
+{context_json_str}
 
 USER QUESTION: {query}
 
 INSTRUCTION:
-Answer in PURE MARKDOWN format. Do not use JSON.
+Answer in PURE MARKDOWN format. Do not use JSON output.
 Follow the 5 headers exactly.
 """
         messages = [
@@ -185,12 +220,19 @@ Follow the 5 headers exactly.
         ]
     else:
         # Standard Chat
+        # Reconstruct simple string context for standard chat
+        context_str = ""
+        if retrieved_sources:
+             context_str = "\n\n".join([f"Source: {r['source']} ({r['reference']})\nContent: {r['core_idea']}" for r in retrieved_sources])
+        else:
+             context_str = "No specific scripture context found."
+
         prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
 Please provide a concise and clear answer (maximum 300 words).
 
 Context:
-{context}
+{context_str}
 
 Question: {query}
 
@@ -212,7 +254,7 @@ The JSON must have two keys:
         answer_text = response.content
         
         # Debug tag to prove new logic ran
-        status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if context_parts else 'Cloud/General'})_"
+        status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
         answer_text += status_tag
         
         # Extract Follow Ups
