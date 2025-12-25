@@ -61,17 +61,5 @@ async def trigger_story(background_tasks: BackgroundTasks):
     background_tasks.add_task(generate_daily_story)
     return {"message": "Daily story generation triggered in background"}
 
-@app.post("/api/ask_new")
-def ask_new(question: str, mode: str = "chat"):
-    # Direct bypass to current engine logic
-    from app.rag.engine import ask_question as ask_lib
-    try:
-        print(f"V2 Endpoint hit: {question}")
-        answer = ask_lib(question, mode=mode)
-        return {"answer": answer}
-    except Exception as e:
-        print(f"Error in V2: {e}")
-        return JSONResponse(status_code=500, content={"answer": f"Error: {e}"})
-
 # Serve frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="static")

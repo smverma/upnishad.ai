@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Pass the currentMode to the API
-            const response = await fetch(`/api/ask_new?question=${encodeURIComponent(text)}&mode=${currentMode}`, {
+            const response = await fetch(`/api/ask?question=${encodeURIComponent(text)}&mode=${currentMode}`, {
                 method: 'POST'
             });
             if (!response.ok) {
