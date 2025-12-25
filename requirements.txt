@@ -15,3 +15,7 @@ requests
 pydantic
 python-multipart
 jinja2
+faiss-cpu
+sentence-transformers
+pandas
+openpyxl

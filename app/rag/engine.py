@@ -85,59 +85,70 @@ def call_llm_with_retry(prompt_messages, max_retries=5):
             else:
                 raise e
 
+from app.rag.faiss_engine import search_gita
+
 def ask_question(query: str, mode: str = "chat") -> str:
     global pinecone_index, llm, embeddings
     
-    if not (pinecone_index and llm and embeddings):
+    # Initialize Core RAG components (always needed for LLM)
+    if not (llm):
         initialize_rag()
-        if not (pinecone_index and llm and embeddings):
-             # check which one is missing for better error
-            missing = []
-            if not os.getenv("PINECONE_API_KEY") or "your_" in os.getenv("PINECONE_API_KEY", ""): missing.append("PINECONE_API_KEY")
-            if not os.getenv("PINECONE_INDEX_NAME") or "your_" in os.getenv("PINECONE_INDEX_NAME", ""): missing.append("PINECONE_INDEX_NAME")
-            if not os.getenv("GOOGLE_API_KEY") or "your_" in os.getenv("GOOGLE_API_KEY", ""): missing.append("GOOGLE_API_KEY")
-            
-            if missing:
-                return f"System not initialized. Missing or invalid real API keys in .env: {', '.join(missing)}"
-            
-            return "System not initialized. Check server logs."
     
-    try:
-        # 1. Embed query
-        query_vector = embeddings.embed_query(query)
-        if not query_vector:
-            return "Failed to generate embeddings for query."
+    # Context Retrieval Strategy
+    context_parts = []
+    
+    # 1. DEEP DIVE MODE: Prefer Local FAISS (Gita)
+    if mode == "deep_dive":
+        print(f"Deep Dive Mode: Attempting Local FAISS Search for '{query}'")
+        try:
+            faiss_results = search_gita(query, top_k=5)
+            if faiss_results:
+                print(f"FAISS found {len(faiss_results)} matches.")
+                for res in faiss_results:
+                     # Create rich context string including metadata
+                     text = f"Source: {res['source']}\nSanskrit: {res['sanskrit']}\nMeaning: {res['text']}"
+                     context_parts.append(text)
+            else:
+                print("FAISS returned 0 results. Falling back to Pinecone.")
+        except Exception as e:
+            print(f"FAISS Search Failed: {e}. Falling back to Pinecone.")
 
-        # 2. Query Pinecone
-        results = pinecone_index.query(
-            vector=query_vector,
-            top_k=5,
-            include_metadata=True,
-            namespace="gita"  # Correct namespace found in stats
-        )
+    # 2. STANDARD/FALLBACK: Pinecone (Cloud)
+    # Only query pinecone if we don't have enough context from FAISS yet
+    if not context_parts:
+        if not (pinecone_index and embeddings):
+             initialize_rag()
         
-        # 3. Construct Context
-        context_parts = []
-        print(f"Query: {query}, Mode: {mode}")
-        print(f"Matches found: {len(results.matches)}")
-        for match in results.matches:
-            # Similarity threshold (lowered to 0.1 to ensure we get data)
-            if match.score < 0.1:
-                continue
-                
-            text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
-            
-            if text_content:
-                context_parts.append(text_content)
-        
-        context = "\n\n".join(context_parts)
-        if not context:
-            context = "No specific scripture context found. Answer from general vedic knowledge."
+        if pinecone_index and embeddings:
+            try:
+                # Embed query
+                query_vector = embeddings.embed_query(query)
+                if query_vector:
+                    # Query Pinecone
+                    results = pinecone_index.query(
+                        vector=query_vector,
+                        top_k=5,
+                        include_metadata=True,
+                        namespace="gita"
+                    )
+                    
+                    print(f"Pinecone Matches: {len(results.matches)}")
+                    for match in results.matches:
+                        if match.score < 0.1: continue
+                        text_content = match.metadata.get('text') or match.metadata.get('chunk_text')
+                        if text_content:
+                            context_parts.append(text_content)
+            except Exception as e:
+                print(f"Pinecone Search Error: {e}")
 
-        # 4. Prompt LLM for JSON response
-        
-        if mode == "deep_dive":
-            system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
+    context = "\n\n".join(context_parts)
+    if not context:
+        context = "No specific scripture context found. Answer from general vedic knowledge."
+
+    # 4. Prompt LLM for JSON response
+    
+    if mode == "deep_dive":
+        system_instruction = """You are an AI guide trained on Indian philosophical texts (Bhagavad Gita, Principal Upanishads).
 Your role is to explain philosophical ideas clearly and compassionately, without preaching, judgment, or superstition.
 You must be calm, neutral, and reflective. Avoid fatalism, fear, or moral pressure.
 
@@ -168,7 +179,7 @@ MANDATORY ANSWER STRUCTURE (Follow EXACTLY):
 
 If any section cannot be fulfilled based on context, state: "This teaching offers reflection rather than direct instruction."
 """
-            prompt = f"""{system_instruction}
+        prompt = f"""{system_instruction}
             
 CONTEXT FROM SCRIPTURES:
 {context}
@@ -179,9 +190,9 @@ IMPORTANT: Return VALID JSON with these keys:
 - "answer": A markdown formatted string containing the 5 sections above. Use bold headers with Emojis exactly as shown (e.g. **1️⃣ Direct Answer**).
 - "follow_up_questions": List of 4 short relevant follow-up questions.
 """
-        else:
-            # Standard Chat Mode
-            prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
+    else:
+        # Standard Chat Mode
+        prompt = f"""You are an assistant answering questions about the Bhagavad Gita and Upanishads.
 Use the following pieces of retrieved context to answer the question at the end.
 If the answer is not in the context, say that you don't know, but answer from your general knowledge of the scriptures if possible.
 Please provide a concise and clear answer (maximum 300 words).
@@ -197,24 +208,24 @@ Context:
 Question: {query}
 """
         
-        # Use retry logic
-        response = call_llm_with_retry([HumanMessage(content=prompt)])
-        print("LLM Response received successfully.")
-        
-        # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
-        content_str = response.content
-        if isinstance(content_str, list):
-            content_str = "".join([str(part) for part in content_str])
-        
-        clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
-        
-        import json
-        try:
-            return json.loads(clean_content)
-        except json.JSONDecodeError:
-            print(f"Failed to parse JSON from LLM: {response.content}")
-            # Fallback for plain text response to avoid crashing
-            return {"answer": str(response.content), "follow_up_questions": []}
+    # Use retry logic
+    response = call_llm_with_retry([HumanMessage(content=prompt)])
+    print("LLM Response received successfully.")
+    
+    # Clean response content to ensure it's valid JSON (remove markdown code blocks if any)
+    content_str = response.content
+    if isinstance(content_str, list):
+        content_str = "".join([str(part) for part in content_str])
+    
+    clean_content = str(content_str).replace('```json', '').replace('```', '').strip()
+    
+    import json
+    try:
+        return json.loads(clean_content)
+    except json.JSONDecodeError:
+        print(f"Failed to parse JSON from LLM: {response.content}")
+        # Fallback for plain text response to avoid crashing
+        return {"answer": str(response.content), "follow_up_questions": []}
 
 
     except Exception as e:
