@@ -61,7 +61,7 @@ def initialize_rag():
     
     # LLM - Gemini 1.5 Pro (Better instruction following)
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.5, google_api_key=google_api_key)
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.5, google_api_key=google_api_key)
         print("RAG Initialized successfully with Pinecone & Gemini Pro (Direct Mode).")
     except Exception as e:
         print(f"Failed to initialize Gemini: {e}")
@@ -192,12 +192,13 @@ def ask_question(query: str, mode: str = "chat") -> str:
 ## 3. Mandatory Answer Structure (PURE MARKDOWN)
 Every answer MUST include these sections in order (use exact headers):
 
-1. **Direct Answer (TL;DR)**
+1. **Direct Answer**
    - 2–3 lines. Clear, factual, non-mystical.
 
-2. **Scriptural Grounding**
-   - Use ONLY retrieved verses.
-   - Chapter + verse required.
+2. **Shastra Pramana**
+   - Quote the original Sanskrit Shloka (Devanagari) in a code block labeled 'text'.
+   - Citation format: **Source Name, Chapter X, Verse Y** (e.g., *Bhagavad Gita, Chapter 2, Verse 47*).
+   - NO English translation in this section. Move translations to the 'Meaning & Interpretation' section.
 
 3. **Meaning & Interpretation**
    - Modern explanation.
@@ -271,17 +272,27 @@ The JSON must have two keys:
         content_text = str(response.content)
 
     if is_deep_dive:
+        # Gemini sometimes wraps the markdown in ```json ... ``` even when told not to.
+        # We must strip this if present, otherwise it renders as code block.
         answer_text = content_text
+        if answer_text.strip().startswith("```json"):
+             answer_text = answer_text.strip().replace("```json", "", 1)
+        if answer_text.strip().endswith("```"):
+             answer_text = answer_text.strip()[:-3]
+        
+        # Also clean up any leading/trailing quotes if it was a JSON string
+        answer_text = answer_text.strip().strip('"')
         
         # Debug tag to prove new logic ran
-        status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
-        answer_text += status_tag
+        # Debug tag removed as per user request
+        # status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
+        # answer_text += status_tag
         
         # Extract Follow Ups
         follow_ups = []
         if "Suggested Questions:" in answer_text:
             parts = answer_text.split("Suggested Questions:")
-            answer_text = parts[0].strip() + status_tag
+            answer_text = parts[0].strip()
             lines = parts[1].strip().split('\n')
             follow_ups = [line.strip('- ').strip() for line in lines if line.strip()]
             

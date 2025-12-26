@@ -6,3 +6,5 @@ venv/
 .idea/
 .vscode/
 data/ # Assuming data handles might be large or private, but usually safe to ignore if just raw texts
+
+server_debug_log.txt

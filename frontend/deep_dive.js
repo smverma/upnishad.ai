@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // STRICTLY USE DEEP DIVE MODE
             console.log("Sending Deep Dive Request...");
-            const response = await fetch(`/api/ask?question=${encodeURIComponent(text)}&mode=${currentMode}`, {
+            const response = await fetch(`http://127.0.0.1:8000/api/ask?question=${encodeURIComponent(text)}&mode=${currentMode}`, {
                 method: 'POST'
             });
 

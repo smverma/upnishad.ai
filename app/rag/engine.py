@@ -61,7 +61,7 @@ def initialize_rag():
     
     # LLM - Gemini 1.5 Pro (Better instruction following)
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.5, google_api_key=google_api_key)
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.5, google_api_key=google_api_key)
         print("RAG Initialized successfully with Pinecone & Gemini Pro (Direct Mode).")
     except Exception as e:
         print(f"Failed to initialize Gemini: {e}")
@@ -192,21 +192,19 @@ def ask_question(query: str, mode: str = "chat") -> str:
 ## 3. Mandatory Answer Structure (PURE MARKDOWN)
 Every answer MUST include these sections in order (use exact headers):
 
-1. **Direct Answer (TL;DR)**
-   - 2–3 lines. Clear, factual, non-mystical.
-
-2. **Scriptural Grounding**
+1. **Scriptural Grounding**
    - Use ONLY retrieved verses.
+   - Quote the original Sanskrit Shloka (Devanagari).
    - Chapter + verse required.
 
-3. **Meaning & Interpretation**
+2. **Meaning & Interpretation**
    - Modern explanation.
    - No devotional or poetic language.
 
-4. **Practical Application**
+3. **Practical Application**
    - One real-life implication.
 
-5. **Reflection Prompt**
+4. **Reflection Prompt**
    - One neutral, open-ended question.
 
 AFTER the reflection prompt, add a section called "Suggested Questions:" with 4 follow-up questions.
@@ -261,14 +259,15 @@ The JSON must have two keys:
         answer_text = response.content
         
         # Debug tag to prove new logic ran
-        status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
-        answer_text += status_tag
+        # Debug tag removed as per user request
+        # status_tag = f"\n\n_(Mode: Deep Dive | Context: {'Local FAISS' if retrieved_sources else 'Cloud/General'})_"
+        # answer_text += status_tag
         
         # Extract Follow Ups
         follow_ups = []
         if "Suggested Questions:" in answer_text:
             parts = answer_text.split("Suggested Questions:")
-            answer_text = parts[0].strip() + status_tag
+            answer_text = parts[0].strip()
             lines = parts[1].strip().split('\n')
             follow_ups = [line.strip('- ').strip() for line in lines if line.strip()]
             

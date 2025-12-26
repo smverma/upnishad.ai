@@ -553,3 +553,14 @@ footer {
         font-size: 0.8rem;
     }
 }
+
+/* User request: Colored numbers in lists */
+.message ol {
+    padding-left: 20px;
+}
+
+.message ol li::marker {
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 1.1em;
+}
