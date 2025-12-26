@@ -16,5 +16,5 @@ COPY . .
 # Expose port 8080 (Google Cloud Run default)
 EXPOSE 8080
 
-# Run uvicorn server on port 8080
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run uvicorn server on port 8080 (Cloud Run expects listening on $PORT)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}

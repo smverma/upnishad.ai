@@ -1,8 +1,4 @@
-import pandas as pd
-import faiss
-import numpy as np
 import os
-from sentence_transformers import SentenceTransformer
 import pickle
 
 # Global FAISS index and metadata
@@ -16,6 +12,12 @@ METADATA_FILE_PATH = "app/data/gita_metadata.pkl"
 
 def initialize_faiss():
     global faiss_index, gita_metadata, model
+    
+    # Lazy Imports
+    import pandas as pd
+    import faiss
+    import numpy as np
+    from sentence_transformers import SentenceTransformer
     
     # Initialize Embedding Model (lightweight)
     try:
